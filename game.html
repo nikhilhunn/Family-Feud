@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+\]!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -119,24 +119,24 @@
         });
 
         function parseCSV(content) {
-            const rows = content.split('\n').filter(row => row.trim() !== '');
-            const parsed = rows.map(row => {
-                const [question, answer, points] = row.split(',').map(item => item.trim());
-                return { question, answer, points: parseInt(points) };
-            });
+    const rows = content.split('\n').filter(row => row.trim() !== '');
+    const parsed = rows.map(row => {
+        const [question, answer, points] = row.split(',').map(item => item.trim().replace(/^"|"$/g, ''));
+        return { question, answer, points: parseInt(points) };
+    });
 
-            // Group answers by question
-            questions = parsed.reduce((acc, curr) => {
-                const existing = acc.find(q => q.question === curr.question);
-                if (existing) {
-                    existing.answers.push({ answer: curr.answer, points: curr.points });
-                } else {
-                    acc.push({ question: curr.question, answers: [{ answer: curr.answer, points: curr.points }] });
-                }
-                return acc;
-            }, []);
-            alert('Questions uploaded successfully!');
+    // Group answers by question
+    questions = parsed.reduce((acc, curr) => {
+        const existing = acc.find(q => q.question === curr.question);
+        if (existing) {
+            existing.answers.push({ answer: curr.answer, points: curr.points });
+        } else {
+            acc.push({ question: curr.question, answers: [{ answer: curr.answer, points: curr.points }] });
         }
+        return acc;
+    }, []);
+    alert('Questions uploaded successfully!');
+}
 
         function startGame() {
             if (questions.length === 0) {
