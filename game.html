@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Feud Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .answer {
+            background-color: #ddd;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .answer.revealed {
+            background-color: #4caf50;
+            color: white;
+        }
+        .scoreboard {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        #next-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #next-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .team-score {
+            margin: 20px 0;
+        }
+        .team-score span {
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .assign-buttons button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .assign-buttons button.team1 {
+            background-color: #ff6f61;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .assign-buttons button.team2 {
+            background-color: #61afff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Family Feud Game</h1>
+    <input type="file" id="csvUpload" accept=".csv">
+    <button onclick="startGame()">Start Game</button>
+    <div id="game-container">
+        <div id="question" class="question"></div>
+        <div id="answers-container"></div>
+        <button id="next-button" onclick="nextQuestion()">Next Question</button>
+        <div class="scoreboard">
+            Current Round Score: <span id="current-round-score">0</span>
+        </div>
+        <div class="assign-buttons">
+            <button class="team1" onclick="assignPoints('team1')">Add to Team 1</button>
+            <button class="team2" onclick="assignPoints('team2')">Add to Team 2</button>
+        </div>
+        <div class="team-score">
+            Team 1 Score: <span id="team1-score">0</span>
+        </div>
+        <div class="team-score">
+            Team 2 Score: <span id="team2-score">0</span>
+        </div>
+    </div>
+
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let currentRoundScore = 0;
+        let team1Score = 0;
+        let team2Score = 0;
+
+        // Read CSV file and parse the questions
+        document.getElementById('csvUpload').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const content = e.target.result;
+                    parseCSV(content);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseCSV(content) {
+            const rows = content.split('\n').filter(row => row.trim() !== '');
+            const parsed = rows.map(row => {
+                const [question, answer, points] = row.split(',').map(item => item.trim());
+                return { question, answer, points: parseInt(points) };
+            });
+
+            // Group answers by question
+            questions = parsed.reduce((acc, curr) => {
+                const existing = acc.find(q => q.question === curr.question);
+                if (existing) {
+                    existing.answers.push({ answer: curr.answer, points: curr.points });
+                } else {
+                    acc.push({ question: curr.question, answers: [{ answer: curr.answer, points: curr.points }] });
+                }
+                return acc;
+            }, []);
+            alert('Questions uploaded successfully!');
+        }
+
+        function startGame() {
+            if (questions.length === 0) {
+                alert('Please upload a CSV file first!');
+                return;
+            }
+            currentQuestionIndex = 0;
+            resetScores();
+            document.getElementById('game-container').style.display = 'block';
+            displayQuestion();
+        }
+
+        function displayQuestion() {
+            const currentQuestion = questions[currentQuestionIndex];
+            document.getElementById('question').textContent = currentQuestion.question;
+
+            const answersContainer = document.getElementById('answers-container');
+            answersContainer.innerHTML = '';
+
+            currentRoundScore = 0;
+            updateRoundScore();
+
+            // Create answers
+            currentQuestion.answers.forEach(answerObj => {
+                const answerElement = document.createElement('div');
+                answerElement.className = 'answer';
+                answerElement.textContent = '???';
+                answerElement.dataset.answer = answerObj.answer;
+                answerElement.dataset.points = answerObj.points;
+                answerElement.addEventListener('click', revealAnswer);
+                answersContainer.appendChild(answerElement);
+            });
+
+            // Disable the "Next Question" button until all answers are revealed
+            document.getElementById('next-button').disabled = true;
+        }
+
+        function revealAnswer(event) {
+            const answerElement = event.target;
+            if (!answerElement.classList.contains('revealed')) {
+                answerElement.classList.add('revealed');
+                answerElement.textContent = `${answerElement.dataset.answer} (${answerElement.dataset.points} pts)`;
+                currentRoundScore += parseInt(answerElement.dataset.points);
+                updateRoundScore();
+
+                // Check if all answers are revealed
+                const allRevealed = Array.from(document.querySelectorAll('.answer')).every(answer => answer.classList.contains('revealed'));
+                if (allRevealed) {
+                    document.getElementById('next-button').disabled = false;
+                }
+            }
+        }
+
+        function updateRoundScore() {
+            document.getElementById('current-round-score').textContent = currentRoundScore;
+        }
+
+        function assignPoints(team) {
+            if (team === 'team1') {
+                team1Score += currentRoundScore;
+                document.getElementById('team1-score').textContent = team1Score;
+            } else if (team === 'team2') {
+                team2Score += currentRoundScore;
+                document.getElementById('team2-score').textContent = team2Score;
+            }
+            currentRoundScore = 0;
+            updateRoundScore();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                alert('All questions completed! Reset the game to start over.');
+                document.getElementById('next-button').disabled = true;
+            }
+        }
+
+        function resetScores() {
+            team1Score = 0;
+            team2Score = 0;
+            document.getElementById('team1-score').textContent = team1Score;
+            document.getElementById('team2-score').textContent = team2Score;
+        }
+    </script>
+</body>
+</html>
